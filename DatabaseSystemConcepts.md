@@ -386,3 +386,159 @@ XML 语言支持嵌套结构，很有效。
 | 笛卡儿积 | $\times$ |         $instructor \times department$          |              从两个输入关系中输出所有元组对              |
 | 并       |  $\cup$  | $\Pi_{name}(instructor)\cup\Pi_{name}(student)$ |                输出两个输入关系中元组的并                |
 
+
+
+## 第3章 SQL
+
+### 3.1 SQL 查询语言概览
+
+SQL 语言部分：
+
+- **数据定义语言**（Data-Defination Language，DDL）：提供定义、删除及修改关系模型的命令。
+
+- **数据操纵语言**（Data-Manipulation Language，DML）：提供从数据库中查询信息，记忆在数据空中插入、删除及修改元组的命令。
+
+- **完整性**（integrity）：DDL 中包含定义完整性约束的命令。
+
+- **视图定义**（view definition）：DDL 包括当以视图的命令。
+
+- **事务控制**（transaction control）：定义事务的开始和结束的命令。
+
+- **嵌入式SQL和动态SQL**（embedded SQL and dynamic SQL）：如何嵌入到通用编程语言中。
+
+- **授权**（authorization）：DDL 包括定义对关系和视图的访问权限的命令。
+
+
+### 3.2 SQL 数据定义
+
+SQL DDL 可以定义**关系**及其**信息**：
+
+- 每个关系的模式。
+- 属性的取值类型。
+- 完整性约束。
+- 每个关系维护的索引集合。
+- 每个关系的安全性和权限信息。
+- 每个关系在磁盘上的物理存储结构。
+
+#### 3.2.1 基本类型
+
+固有类型：
+
+- **char(n)**：固定长度字符串，全称 **character**。
+
+- **varchar(n)**：可变长度字符串，指最大长度，全称 **character varying**。
+
+- **int**：整形，与机器相关，全称 **integer**。
+
+- **smallint**：小整数类型，与机器相关。
+
+- **numeric(p,d)**：定点数，p位，其中 q位小数。
+
+- **real**：浮点数。
+
+- **double precision**：双精度浮点数。
+- **float(n)**：浮点数，精度至少为 n。
+
+#### 3.2.2 基本模式定义
+
+使用 `create table` 命令定义 SQL 关系，通用格式：
+
+````
+create table r
+	(A_1 D_1, 
+	A_2 D_2, 	
+	...,
+	<integrity constraint_1>,
+	<integrity constraint_2>,
+	...,
+	);
+````
+
+- `r`：关系名
+- `A_i`：属性名
+- `D_i`：对应关系的属性
+
+多种完整性约束，如：
+
+- `primary key (A_i, ...)`：主键
+- `foreign key (A_i, ...) references : r_i `：外键
+- `A_i not null `：非空
+
+### 3.3 SQL 查询的基本结构
+
+使用 `select`、`from` 和 `where` 子句构成。
+
+`select ... from ... where ...`
+
+过程：
+
+-  为`from` 的关系产生笛卡尔积。
+- 对结果应用 `where` 指定的谓词。
+- 输出 `select` 中指定的属性。
+
+
+
+要点：
+
+- 得到结果默认是有重复项的，`select distinct ...` 去重。
+
+- 使用 `r_i.A_i` 来指定特定关系中的属性，防止使用多个关系时，属性名重复导致的混淆。
+- `whree` 子句就是限制使用多个关系时，生成笛卡尔积的大小。
+
+### 3.4 附加的基本运算
+
+- **自然连接**（natural join）的得到两个关系中相同属性名上属性也相同的笛卡尔积。`from r_i natural join r_j`。`r_i join r_j using (A_i, ...)`。
+- 重命名 `r_i as r_n`，新的名字称作**相关名称**（correlation name）、**表别名**（table alias）、**相关变量**（correlation variable）或 **元组变量**（tuple variable）。
+- 使用一对单引号表示字符串，使用**两个单引号**表示一个字符串中的**单引号**。
+- 在 `like` 条件子句中，使用 `%` 表示任意多个字符，而 `_` 表示任意一个字符，使用额外的 `escape` 子句定义转义字符，以匹配特殊字符。`like 'ab\%cd%' escape '\'` 匹配以`ab%cd` 开头的所有字符串。
+- `*`可表示所有属性。
+- `order by` 子句**排列**元组的顺序，默认升序，`desc` 表示降序，`ase`表示升序。`order by A_i desc, A_j ase`。
+- `A_i between n_1 and n_2` 比较属性值是否在两者之间。
+
+### 3.5 集合运算
+
+- `union`，`intersect` ，`except`  对应集合中的**并**，**交**，**差**运算。会自动去重。
+- `(select A_i from r_i where A_i = n_i ) union (select A_j from r_j where A_j = n_j )` 。
+
+### 3.6 空值
+
+- 涉及到 `null` 的任何操作，得到的结果都是 `unknown`，既不是 `is null` ，也不是 `not is null`。是**第三个逻辑值**。
+- 如果一个涉及`unknown`的逻辑表达式，不使用`unknown`部分就可以得到确定的逻辑值，结果就为这个值，否则结果为 `unknown`。
+
+### 3.7 聚合函数
+
+- `avg`，`min`，`max`，`sum`，`count`
+- `select avg(A_i) as A_n from r_i group by A_j having A_j > 0;  ` ，`group by` 是分组依据，而 `having` 是只提取符合条件的分组。
+- 聚合时不计算 `null` 的值。
+
+过程：
+
+- `from` 计算笛卡尔积
+- `where` 过滤
+- `group by` 分组
+- `having` 过滤分组
+- `select` 提取
+
+### 3.8 嵌套子查询
+
+可以使用嵌套子查询，代替任何**关系**可以出现的位置。
+
+- 集合成员资格：`where A_i in r_i` ，条件为 `A_i` 在 `r_i` 中的元组。
+- 集合的比较：`where A_i > some r_i`，条件为，`A_i`与`r_i` 中的任意元组满足条件。`where A_i > all r_i`，条件为，`A_i`与`r_i` 中的所有元组满足条件。
+- 空关系测试：`where exists (r_i)`，条件为 `r_i` 不为空。
+  - **相关子查询**（correlated subquery）：使用了来自**外层查询相关名称**的子查询。
+- 重复元组存在性测试：`where unique (r_i)`，条件为 `r_i` 中不存在重复元组。
+- 关系重命名：`(select A_i from r_i ) as r_j (A_j)`，将一个查询结果，重命名成一个关系，方便使用。
+- 临时关系：`with  r_j (A_j) as (select A_i from r_i ) select r_j.A_j from r_k where r_k.A_j = r_j.A_j  `，是在 `where`语句中写子查询的等价形式，但是更直观明了，`with`中的`as` 是将**后面关系**重命名为**前面的名称**。 
+- 标量子查询：`where A_i = (select count(*) from r_i)`，可以在使用标量的地方使用这个查询，需要保证只有一个返回值。
+
+### 3.9 数据库的修改
+
+- 删除：`delete from r_i where (); `，每次只能删除一个关系中的元组。
+
+- 插入：`insert into r_i (A_i, ...) values (v_i, ...);`，在指定关系中，插入指定属性的值。
+
+- 更新：`update r_i set A_i = v_i where () `，或者使用 `case` ，即 `update r_i set A_i = case when() then () ... else () where ()`，每一个 `when` 对应一个 `then` ，将 `then` 的结果更新给 `A_i` 。
+
+  
+

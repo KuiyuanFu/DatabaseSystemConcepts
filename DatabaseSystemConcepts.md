@@ -542,3 +542,64 @@ create table r
 
   
 
+## 第4章 中级 SQL
+
+### 4.1 连接表达式
+
+- `select * form r_i join r_j on r_i.A_i = r_j.a_j;` ，使用 `on` 来指定自然连接的条件，此时等价于 `where ` 语句。可以同时使用 `on` 语句表示连接条件，`where` 语句表示其他的过滤条件，更清晰。
+-  `select * form r_i left outer join r_j;` ，外连接将**保留未出现匹配的元组**，即 `left outer join` 中，即使左侧的关系中，有的元组并没有与右侧元组匹配，但是还会出现在结果中，此元组中的右侧的属性为 `null`。`right outer join` 将保留所有右侧关系。`full outer join` 保留所有关系。即外连接，保证了关系中所有元组都会出现在结果中，而**常规连接**是**内连接**，不匹配的元组不会出现在结果中。
+- `on` 语句是在**连接期间**起作用的，所以可以保证在外连接时，左右两侧都是有值的，而不是连接后，补的`null`值。
+
+### 4.2 视图
+
+- **视图**（view）：不是逻辑模型的一部分，但作为**虚关系**对用户可见的关系。由于权限等原因，不能向用户展示关系中的所有属性，可以通过一个查询将逻辑模型中的关系映射到一个新的虚关系中，这个关系并不储存属性，访问时，进行查询，保证一致性。
+- `create view v(A_i,...) as  <query expression>;` 将查询语句保存为视图。可以显式指定属性名，也可以省略，直接使用查询结果的属性名。但是结果属性是没有名字的，就需要显式指定了。
+- `select A_i from v; `，像使用关系一样使用视图。
+- **物化视图**（materialized view）：存储视图关系，保证定义视图的实际关系改变时，视图也随之改变。适用于查询过程复杂，而结果简单的视图。需要使用数据库系统提供的扩展工具，没有标准工具。
+  - **视图维护**（view maintenance）：保持物化视图一直在最新状态的过程。
+- **可更新的**（updatable）：一般情况是不允许向视图更新元组的，因为存在连接、空属性、无属性的情况。只有满足特定条件才是可更新的。插入的元组，必须满足 `where` 子句的条件。
+  - `from` 子句只有一个关系。
+  - `select` 子句中只包含关系的属性，不包含表达式。
+  - 没有出现在 `select` 中的属性是可以包含 `null` 的。
+  - 查询中不包含 `group by`，`having` 子句。
+
+### 4.3 事务
+
+- **事务**（transaction）：由查询和更新语句的序列组成。当一条 SQL 语句开始执行时，就**隐式**开始了一个事务。`Commit work` 会提交当前事务，并持久保存；`Rollback work` 会回滚当前事务，撤销所有更新。大部分数据库，将一个SQL 语句自成一个事务，执行后直接提交，关闭自动提交依赖系统实现。SQL:1999 标准中允许多条 SQL 语句包含在 `begin atomic ... end `中，形成一个事务，但是并不是所有系统都实现了。
+
+  
+
+### 4.4 完整性约束
+
+- `create table <constraint> ` 和`alter table <table name> add <constraint>` 是添加完整行约束的两种方式。
+- `not null` 非空约束，禁止插入空值。主码默认非空。
+- `unique` 唯一约束，可以使用 `unique (A_i,...)` 约束多个属性，使其称为一个候选码。
+- `check (P)` ，满足谓词 `P` 。
+- `foreign key(A_i) reference r_i` 参照完整性，**外键属性的值**必须在**其为主键的关系**值中出现。当违反参照完整性时，可以设置不拒绝，而是额外执行更多操作。`on delete cascade`，级联删除。`on update cascade` 级联更新。
+- ` <constraint> initially deferred` 子句，使约束可以延迟检查。默认情况是立即检查。但在事务中，可能临时违反约束，但是之后会修正，可以在事务中添加 `set constraints <constraint list> deferred` ，指定需要延迟检查的约束，会在事务语句之后完后进行检查。
+- `create assertion <assertion name > check <predicate>;` 通过创建断言，制定复杂的约束。
+
+
+
+### 4.5 SQL 的数据类型与模式
+
+- `data` 日历日期，年月日。
+- `time` 一天的时间，小时分钟秒。
+- `timestamp(p)` 时间戳，指定秒后的位数。
+- `default n` 设置默认值为 `n`。
+- `create index <index name> on <table name > (< attribute name list>)`  在指定的属性上创建索引。若多个属性，会依次作为索引条件。
+- `clob ` `blob` 分别是**字符**和**二进制**的大对象。
+- `create type <new type name> as <type> final ; `将类型定义定义为一个新类型，这样可以指代明确。
+- `create domain <domain name > <type> constraint <constraint name > check ( < P > )`;，创建一个域，可以作为属性类型。
+- `create table <table name > as <table>;` 创建一个同结构的表。`create table <table name > as < select ...> with data;` 连数据一起复制。
+- **目录**（catalog）是第一层，即文件。**模式**（schema），第二层。**关系**、**视图**等为第三层。定位一个表，为 `<catalog>.<schema>.<relation>`。                   
+
+### 4.6 授权
+
+- `select`、`insert`、`update`、`delete`四种权限。`all privileges` 为所有权限。
+- `grant <privileges list > on <relation>(attribute list) to <user list>`。
+- `revoke <privileges list > on <relation>(attribute list) to <user list>`。
+- `create role <role name >; grant <privileges list > on <relation>(attribute list) to <role name >;  grant  <role name > to  <user list>;` 使用角色来分配权限。
+- 创建视图时，由于使用视图需要进行查询，所以权限为创建者的权限。
+- `grant reference (attribute list)  on <relation> to <user list> ` 获得参照权限，因为修改原关系时，需要根据参照完整性，检查是否有外键属性使用了这个值。
+- `grant <privileges list > on <relation>(attribute list) to <user list> with grant option` 。`with grant option`允许用户转移这个权限。
